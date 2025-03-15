@@ -9,3 +9,4 @@ F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.dll
 F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\refint\Engine.dll
 F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.pdb
 F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\ref\Engine.dll
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.sourcelink.json

@@ -26,13 +26,14 @@ namespace Test
                 for (int j = 0; j < size.X; j++)
                 {
                     Screen.SetPixel(j, i, (byte)(j / size.X * 255), (byte)(i / size.Y * 255),
-                        (byte)((MathF.Sin(_time / 10f * 3.141592f) + 1) / 2 * 255));
+                        (byte)((-MathF.Cos(_time / 5 * 3.141592f) + 1) / 2 * 255));
                 }
             }
             _time += deltaTime;
 
-            Screen.Text(0, 0, (1f / deltaTime).ToString("000.00 fps"));
-            Screen.Text(0, 1, _time.ToString("0.00 sec"));
+            Screen.Text(0, 0, $"fps: {(1f / deltaTime):00.00}");
+            Screen.Text(0, 1, $"time: {_time:0.00}");
+            Screen.Text(0, 2, $"resolution: {size}");
         }
     }
 }
