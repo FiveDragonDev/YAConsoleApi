@@ -1,0 +1,11 @@
+F:\Projects\CSharp\YAConsoleApi\Engine\bin\Debug\net8.0\Engine.deps.json
+F:\Projects\CSharp\YAConsoleApi\Engine\bin\Debug\net8.0\Engine.dll
+F:\Projects\CSharp\YAConsoleApi\Engine\bin\Debug\net8.0\Engine.pdb
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.GeneratedMSBuildEditorConfig.editorconfig
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.AssemblyInfoInputs.cache
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.AssemblyInfo.cs
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.csproj.CoreCompileInputs.cache
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.dll
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\refint\Engine.dll
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\Engine.pdb
+F:\Projects\CSharp\YAConsoleApi\Engine\obj\Debug\net8.0\ref\Engine.dll
