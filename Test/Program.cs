@@ -4,6 +4,9 @@ namespace Test
 {
     internal class Program
     {
+        private static float _framesPerSecondOutput;
+        private static float _framesPerSecond;
+        private static float _lastTime;
         private static float _time;
 
         private static void Main()
@@ -19,21 +22,22 @@ namespace Test
         }
         private static void Draw(float deltaTime)
         {
-            Vector2 size = Screen.WindowSize;
-            
-            for (int i = 0; i < size.Y; i++)
-            {
-                for (int j = 0; j < size.X; j++)
-                {
-                    Screen.SetPixel(j, i, (byte)(j / size.X * 255), (byte)(i / size.Y * 255),
-                        (byte)((-MathF.Cos(_time / 5 * 3.141592f) + 1) / 2 * 255));
-                }
-            }
-            _time += deltaTime;
+            Screen.ConvexShape(
+                new(3, 4, Colors.Red), new(65, 10, Colors.Yellow),
+                new(30, 20, Colors.Cyan), new(10, 20, Colors.Blue));
 
-            Screen.Text(0, 0, $"fps: {(1f / deltaTime):00.00}");
+            _time += deltaTime;
+            _framesPerSecond++;
+            if (_time >= Math.Ceiling(_lastTime))
+            {
+                _framesPerSecondOutput = _framesPerSecond;
+                _framesPerSecond = 0;
+            }
+            _lastTime = _time;
+
+            Screen.Text(0, 0, $"fps: {_framesPerSecondOutput:00}");
             Screen.Text(0, 1, $"time: {_time:0.00}");
-            Screen.Text(0, 2, $"resolution: {size}");
+            Screen.Text(0, 2, $"resolution: {Screen.WindowSize}");
         }
     }
 }
