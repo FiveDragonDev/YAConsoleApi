@@ -4,8 +4,8 @@ namespace Test
 {
     internal class Program
     {
-        private static float _framesPerSecondOutput;
-        private static float _framesPerSecond;
+        private static int _framesPerSecondCounter;
+        private static readonly List<int> _framesPerSecond = [];
         private static float _lastTime;
         private static float _time;
 
@@ -13,29 +13,32 @@ namespace Test
         {
             Screen.OnKeyPressed += KeyPressed;
             Screen.OnDraw += Draw;
+            Screen.OnClose += () => Loger.Log($"Average FPS was: {_framesPerSecond.Average():0.0000}");
             Screen.Initialize(120, 30, "Test");
         }
 
         private static void KeyPressed(ConsoleKeyInfo info)
         {
-            if (info.Key == ConsoleKey.Escape) Environment.Exit(0);
+            if (info.Key == ConsoleKey.Escape) Screen.Close();
         }
         private static void Draw(float deltaTime)
         {
             Screen.ConvexShape(
-                new(3, 4, Colors.Red), new(65, 10, Colors.Yellow),
-                new(30, 20, Colors.Cyan), new(10, 20, Colors.Blue));
-
+                new(new(3, 6, Colors.Red), new(15, 3, Colors.Yellow),
+                new(32, 14, Colors.Yellow), new(29, 22, Colors.Cyan),
+                new(9, 19, Colors.Blue)));
+             
             _time += deltaTime;
-            _framesPerSecond++;
+
+            _framesPerSecondCounter++;
             if (_time >= Math.Ceiling(_lastTime))
             {
-                _framesPerSecondOutput = _framesPerSecond;
-                _framesPerSecond = 0;
+                _framesPerSecond.Insert(0, _framesPerSecondCounter);
+                _framesPerSecondCounter = 0;
             }
             _lastTime = _time;
 
-            Screen.Text(0, 0, $"fps: {_framesPerSecondOutput:00}");
+            Screen.Text(0, 0, $"fps: {_framesPerSecond[0]:00}");
             Screen.Text(0, 1, $"time: {_time:0.00}");
             Screen.Text(0, 2, $"resolution: {Screen.WindowSize}");
         }

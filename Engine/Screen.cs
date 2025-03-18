@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Collections;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Engine
@@ -14,23 +15,40 @@ namespace Engine
 
         public static event Action<ConsoleKeyInfo>? OnKeyPressed;
         public static event Action<float>? OnDraw;
+        public static event Action? OnClose;
 
         public static bool IsOpen { get; private set; }
 
         private static char[]? _symbols;
+        private static char[]? _previousSymbols;
+
         private static byte[]? _pixels;
+        private static byte[]? _previousPixels;
+
         private static StringBuilder? _outputBuffer;
 
+        private static readonly Dictionary<Color, string> _colorCache = [];
+
+        /// <summary>
+        /// Initializes screen with yours params
+        /// </summary>
+        /// <param name="width">Screen width</param>
+        /// <param name="height">Screen height</param>
+        /// <param name="title">Screen title</param>
         public static void Initialize(int width, int height, string title)
         {
             WindowSize = new(width, height);
             Title = title;
 
-            _pixels = new byte[width * height * 3];
-            Array.Clear(_pixels, 0, _pixels.Length);
-
             _symbols = new char[width * height];
+            _previousSymbols = new char[width * height];
+            _pixels = new byte[width * height * 3];
+            _previousPixels = new byte[width * height * 3];
+
             Array.Fill(_symbols, ' ');
+            Array.Copy(_symbols, _previousSymbols, _symbols.Length);
+            Array.Clear(_pixels, 0, _pixels.Length);
+            Array.Copy(_pixels, _previousPixels, _pixels.Length);
 
             _outputBuffer = new(width * height * 20);
 
@@ -41,6 +59,8 @@ namespace Engine
 
             Console.Clear();
             Console.CursorVisible = false;
+
+            Loger.Log($"Screen was initialized (Title: {title}; Resolution: {WindowSize})");
 
             IsOpen = true;
 
@@ -53,11 +73,25 @@ namespace Engine
 
                 Array.Clear(_pixels, 0, _pixels.Length);
                 Array.Fill(_symbols, ' ');
-                _outputBuffer.Clear();
 
                 OnDraw?.Invoke(deltaTime);
 
-                _outputBuffer.Append($"\x1b[H\x1b[0m");
+                DrawScreen();
+
+                Array.Copy(_pixels, _previousPixels, _pixels.Length);
+                Array.Copy(_symbols, _previousSymbols, _symbols.Length);
+
+                deltaTime = (float)(DateTime.Now - time).TotalSeconds;
+                time = DateTime.Now;
+            }
+
+            static void DrawScreen()
+            {
+                if (_outputBuffer == null) return;
+
+                _outputBuffer.Clear();
+                _outputBuffer.Append("\x1b[H\x1b[0m");
+
                 for (int y = 0; y < WindowSize.Y; y++)
                 {
                     for (int x = 0; x < WindowSize.X; x++)
@@ -65,35 +99,54 @@ namespace Engine
                         var symbol = GetSymbol(x, y);
                         var color = GetPixel(x, y);
 
-                        _outputBuffer.Append($"\x1b[48;2;" +
-                            $"{color.R};{color.G};{color.B}m{symbol}\x1b[0m");
+                        _outputBuffer.Append(GetColorCode(color));
+                        _outputBuffer.Append(symbol);
+                        _outputBuffer.Append("\x1b[0m");
                     }
                     if (y < WindowSize.Y - 1) _outputBuffer.AppendLine();
                 }
 
                 Console.Write(_outputBuffer.ToString());
-
-                deltaTime = (float)(DateTime.Now - time).TotalSeconds;
-                time = DateTime.Now;
             }
         }
+        /// <summary>
+        /// Closes screen
+        /// </summary>
+        public static void Close()
+        {
+            IsOpen = false;
+            OnClose?.Invoke();
+            Loger.Log($"Screen was closed");
+        }
 
-        public static void Close() => IsOpen = false;
-
+        #region Simple shapes
+        /// <summary>
+        /// Draws text on the screen
+        /// </summary>
+        /// <param name="left">Left offset</param>
+        /// <param name="top">Top offset</param>
+        /// <param name="text">Text that will rendered</param>
         public static void Text(int left, int top, string text)
         {
             if (_symbols == null || _pixels == null) return;
 
-            for (int i = 0; i < text.Length; i++)
+            Parallel.For(0, text.Length, (i) =>
             {
                 int newLeft = left + i;
                 SetPixel(newLeft, top, Colors.Black);
                 SetSymbol(newLeft, top, text[i]);
-            }
+            });
         }
 
+        /// <summary>
+        /// Draws line on the screen
+        /// </summary>
+        /// <param name="start">Start point of line</param>
+        /// <param name="end">End point of line</param>
         public static void Line(Vertex start, Vertex end)
         {
+            if (_pixels == null) return;
+
             int x0 = start.Position.X;
             int y0 = start.Position.Y;
             int x1 = end.Position.X;
@@ -129,20 +182,24 @@ namespace Engine
             }
         }
 
-        public static void ConvexShape(params Vertex[] vertices)
+        /// <summary>
+        /// Draws the convex shape on the screen
+        /// </summary>
+        /// <param name="vertices">Points that will used to draw a N-gon</param>
+        public static void ConvexShape(VertexArray vertices)
         {
-            if (vertices.Length < 3) return;
+            if (vertices.Count < 3 || _pixels == null) return;
 
             var minY = vertices.Min(p => p.Position.Y);
             var maxY = vertices.Max(p => p.Position.Y);
 
-            for (int y = minY; y <= maxY; y++)
+            Parallel.For(minY, maxY + 1, (y) =>
             {
-                List<(int X, Color Color)> intersections = new();
-                for (int i = 0; i < vertices.Length; i++)
+                List<(int X, Color Color)> intersections = new List<(int X, Color Color)>();
+                for (int i = 0; i < vertices.Count; i++)
                 {
                     var p1 = vertices[i];
-                    var p2 = vertices[(i + 1) % vertices.Length];
+                    var p2 = vertices[(i + 1) % vertices.Count];
 
                     if (p1.Position.Y == p2.Position.Y) continue;
 
@@ -158,25 +215,26 @@ namespace Engine
 
                 intersections.Sort((a, b) => a.X.CompareTo(b.X));
 
-                for (int i = 0; i < intersections.Count - 1; i += 2)
+                for (int i = 0; i < intersections.Count - 1; i++)
                 {
-                    int xStart = intersections[i].X;
-                    int xEnd = intersections[i + 1].X;
+                    var start = intersections[i];
+                    var end = intersections[i + 1];
 
-                    var colorStart = intersections[i].Color;
-                    var colorEnd = intersections[i + 1].Color;
+                    float length = end.X - start.X;
+                    if (length == 0) continue;
 
-                    float length = xEnd - xStart;
-                    for (int x = xStart; x <= xEnd; x++)
+                    for (int x = start.X; x <= end.X; x++)
                     {
-                        float t = (x - xStart) / length;
-                        var color = Color.Mix(colorStart, colorEnd, t);
+                        float t = (x - start.X) / length;
+                        var color = Color.Mix(start.Color, end.Color, t);
                         SetPixel(x, y, color);
                     }
                 }
-            }
+            });
         }
+        #endregion
 
+        #region Set/Get Pixel/Symbol
         public static void SetPixel(int left, int top, Color color)
         {
             if (_pixels == null) return;
@@ -191,7 +249,8 @@ namespace Engine
             if (_pixels == null) return (0, 0, 0);
 
             var index = GetPixelIndex(left, top);
-            return new(_pixels[index], _pixels[index + 1], _pixels[index + 2]);
+            return new(_pixels[index],
+                _pixels[index + 1], _pixels[index + 2]);
         }
         public static int GetPixelIndex(int left, int top) =>
             ((top * WindowSize.X) + left) * 3;
@@ -212,7 +271,9 @@ namespace Engine
         }
         public static int GetSymbolIndex(int left, int top) =>
             (top * WindowSize.X) + left;
+        #endregion
 
+        #region Utilities
         private static void EnableAnsiCodes()
         {
             if (Environment.OSVersion.Platform != PlatformID.Win32NT) return;
@@ -222,6 +283,20 @@ namespace Engine
             _ = SetConsoleMode(handle, mode | 0x0004);
         }
 
+        private static string GetColorCode(Color color)
+        {
+            if (!_colorCache.TryGetValue(color, out var code))
+            {
+                code = $"\x1b[48;2;{color.R};{color.G};{color.B}m";
+                _colorCache[color] = code;
+            }
+            return code;
+        }
+        #endregion
+
+        #region Dlls
+#pragma warning disable SYSLIB1054
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr GetStdHandle(int nStdHandle);
 
@@ -230,16 +305,8 @@ namespace Engine
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
-    }
 
-    public struct Vertex(Vector2i position, Color color)
-    {
-        public Vector2i Position = position;
-        public Color Color = color;
-
-        public Vertex(int x, int y, Color color) : this(new(x, y), color) { }
-
-        public static float Distance(Vertex v1, Vertex v2) =>
-            Vector2.Distance(v1.Position, v2.Position);
+#pragma warning restore SYSLIB1054
+        #endregion
     }
 }

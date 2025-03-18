@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "F:\\Projects\\CSharp\\YAConsoleApi\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{9018F871-65A2-49E7-B11E-B27E0FAA0BFA}|Engine\\Engine.csproj|f:\\projects\\csharp\\yaconsoleapi\\engine\\utils.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9018F871-65A2-49E7-B11E-B27E0FAA0BFA}|Engine\\Engine.csproj|solutionrelative:engine\\utils.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{9018F871-65A2-49E7-B11E-B27E0FAA0BFA}|Engine\\Engine.csproj|f:\\projects\\csharp\\yaconsoleapi\\engine\\screen.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{9018F871-65A2-49E7-B11E-B27E0FAA0BFA}|Engine\\Engine.csproj|solutionrelative:engine\\screen.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{C2383019-67D1-495E-963D-F21D3B8366CD}|Test\\Test.csproj|f:\\projects\\csharp\\yaconsoleapi\\test\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{C2383019-67D1-495E-963D-F21D3B8366CD}|Test\\Test.csproj|solutionrelative:test\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{9018F871-65A2-49E7-B11E-B27E0FAA0BFA}|Engine\\Engine.csproj|f:\\projects\\csharp\\yaconsoleapi\\engine\\utils.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{9018F871-65A2-49E7-B11E-B27E0FAA0BFA}|Engine\\Engine.csproj|solutionrelative:engine\\utils.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,34 +22,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 3,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Program.cs",
-              "DocumentMoniker": "F:\\Projects\\CSharp\\YAConsoleApi\\Test\\Program.cs",
-              "RelativeDocumentMoniker": "Test\\Program.cs",
-              "ToolTip": "F:\\Projects\\CSharp\\YAConsoleApi\\Test\\Program.cs",
-              "RelativeToolTip": "Test\\Program.cs",
-              "ViewState": "AgIAABIAAAAAAAAAAAAqwBoAAAAaAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-15T18:15:10.344Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Screen.cs",
-              "DocumentMoniker": "F:\\Projects\\CSharp\\YAConsoleApi\\Engine\\Screen.cs",
-              "RelativeDocumentMoniker": "Engine\\Screen.cs",
-              "ToolTip": "F:\\Projects\\CSharp\\YAConsoleApi\\Engine\\Screen.cs",
-              "RelativeToolTip": "Engine\\Screen.cs",
-              "ViewState": "AgIAAN4AAAAAAAAAAAAUwB4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-15T17:28:34.616Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
@@ -57,12 +31,38 @@
             {
               "$type": "Document",
               "DocumentIndex": 2,
+              "Title": "Program.cs",
+              "DocumentMoniker": "F:\\Projects\\CSharp\\YAConsoleApi\\Test\\Program.cs",
+              "RelativeDocumentMoniker": "Test\\Program.cs",
+              "ToolTip": "F:\\Projects\\CSharp\\YAConsoleApi\\Test\\Program.cs",
+              "RelativeToolTip": "Test\\Program.cs",
+              "ViewState": "AgIAABAAAAAAAAAAAAAQwBUAAAA+AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-15T18:15:10.344Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Screen.cs",
+              "DocumentMoniker": "F:\\Projects\\CSharp\\YAConsoleApi\\Engine\\Screen.cs",
+              "RelativeDocumentMoniker": "Engine\\Screen.cs",
+              "ToolTip": "F:\\Projects\\CSharp\\YAConsoleApi\\Engine\\Screen.cs",
+              "RelativeToolTip": "Engine\\Screen.cs",
+              "ViewState": "AgIAACgAAAAAAAAAAAAmwB4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-15T17:28:34.616Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "Utils.cs",
               "DocumentMoniker": "F:\\Projects\\CSharp\\YAConsoleApi\\Engine\\Utils.cs",
               "RelativeDocumentMoniker": "Engine\\Utils.cs",
               "ToolTip": "F:\\Projects\\CSharp\\YAConsoleApi\\Engine\\Utils.cs",
               "RelativeToolTip": "Engine\\Utils.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACoAAABPAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-15T17:47:54.034Z",
               "EditorCaption": ""

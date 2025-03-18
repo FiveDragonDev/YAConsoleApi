@@ -1,0 +1,3 @@
+[LOG] 03.18.25 23:46:35:138 : Screen was initialized (Title: Test; Resolution: (120, 30))
+[LOG] 03.18.25 23:46:38:598 : Average FPS was: 30,0000
+[LOG] 03.18.25 23:46:38:599 : Screen was closed
