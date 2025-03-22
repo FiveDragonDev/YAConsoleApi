@@ -1,3 +1,4 @@
-[LOG] 03.18.25 23:46:35:138 : Screen was initialized (Title: Test; Resolution: (120, 30))
-[LOG] 03.18.25 23:46:38:598 : Average FPS was: 30,0000
-[LOG] 03.18.25 23:46:38:599 : Screen was closed
+[LOG] 03.22.25 12:58:06:353 : Screen was initialized (Resolution: (120, 30) symbols; Uptime: 16,345 ms)
+[LOG] 03.22.25 12:58:16:325 : Average FPS was: 10,2727
+[LOG] 03.22.25 12:58:16:325 : Screen was closed
+[LOG] 03.22.25 12:58:16:334 : Frametime: (Max: 118,085 ms; Min: 57,914 ms; Average: 80,279 ms)

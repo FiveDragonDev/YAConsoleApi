@@ -1,17 +1,21 @@
-﻿using System.Collections;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Engine
 {
     public static class Screen
     {
+        public static uint Frames { get; private set; }
+        public static float Time { get; private set; }
+
         public static Vector2i WindowSize { get; private set; }
         public static string Title
         {
             get => Console.Title;
             set => Console.Title = value;
         }
+
+        public static Color BackgroundColor { get; set; } = Colors.Black;
 
         public static event Action<ConsoleKeyInfo>? OnKeyPressed;
         public static event Action<float>? OnDraw;
@@ -20,14 +24,14 @@ namespace Engine
         public static bool IsOpen { get; private set; }
 
         private static char[]? _symbols;
-        private static char[]? _previousSymbols;
-
         private static byte[]? _pixels;
-        private static byte[]? _previousPixels;
+
+        private static HashSet<int>? _changedPixels;
 
         private static StringBuilder? _outputBuffer;
+        private static readonly HashSet<float> _frametime = [];
 
-        private static readonly Dictionary<Color, string> _colorCache = [];
+        private static readonly Dictionary<(Color, char), string> _colorCache = [];
 
         /// <summary>
         /// Initializes screen with yours params
@@ -37,86 +41,84 @@ namespace Engine
         /// <param name="title">Screen title</param>
         public static void Initialize(int width, int height, string title)
         {
+            var uptime = DateTime.Now;
             WindowSize = new(width, height);
             Title = title;
 
-            _symbols = new char[width * height];
-            _previousSymbols = new char[width * height];
-            _pixels = new byte[width * height * 3];
-            _previousPixels = new byte[width * height * 3];
-
-            Array.Fill(_symbols, ' ');
-            Array.Copy(_symbols, _previousSymbols, _symbols.Length);
-            Array.Clear(_pixels, 0, _pixels.Length);
-            Array.Copy(_pixels, _previousPixels, _pixels.Length);
-
-            _outputBuffer = new(width * height * 20);
-
             Console.SetWindowSize(width, height);
             Console.SetBufferSize(width, height);
-
-            EnableAnsiCodes();
-
             Console.Clear();
             Console.CursorVisible = false;
+            EnableAnsiCodes();
 
-            Loger.Log($"Screen was initialized (Title: {title}; Resolution: {WindowSize})");
+            InitializeArrays(width, height);
 
             IsOpen = true;
 
-            DateTime time = DateTime.Now;
-            float deltaTime = 0;
+            Loger.Log($"Screen was initialized (" +
+                $"Resolution: {WindowSize} symbols; " +
+                $"Uptime: {(DateTime.Now - uptime).TotalMilliseconds:0.000} ms)");
 
-            while (IsOpen)
-            {
-                if (Console.KeyAvailable) OnKeyPressed?.Invoke(Console.ReadKey(true));
-
-                Array.Clear(_pixels, 0, _pixels.Length);
-                Array.Fill(_symbols, ' ');
-
-                OnDraw?.Invoke(deltaTime);
-
-                DrawScreen();
-
-                Array.Copy(_pixels, _previousPixels, _pixels.Length);
-                Array.Copy(_symbols, _previousSymbols, _symbols.Length);
-
-                deltaTime = (float)(DateTime.Now - time).TotalSeconds;
-                time = DateTime.Now;
-            }
-
-            static void DrawScreen()
-            {
-                if (_outputBuffer == null) return;
-
-                _outputBuffer.Clear();
-                _outputBuffer.Append("\x1b[H\x1b[0m");
-
-                for (int y = 0; y < WindowSize.Y; y++)
-                {
-                    for (int x = 0; x < WindowSize.X; x++)
-                    {
-                        var symbol = GetSymbol(x, y);
-                        var color = GetPixel(x, y);
-
-                        _outputBuffer.Append(GetColorCode(color));
-                        _outputBuffer.Append(symbol);
-                        _outputBuffer.Append("\x1b[0m");
-                    }
-                    if (y < WindowSize.Y - 1) _outputBuffer.AppendLine();
-                }
-
-                Console.Write(_outputBuffer.ToString());
-            }
+            RunMainLoop();
         }
         /// <summary>
         /// Closes screen
         /// </summary>
-        public static void Close()
+        public static void Shutdown()
         {
             IsOpen = false;
+
+            Frames = 0;
+            Time = 0;
             OnClose?.Invoke();
+
             Loger.Log($"Screen was closed");
+            Loger.Log($"Frametime: (" +
+                $"Max: {_frametime.Max():0.000} ms; " +
+                $"Min: {_frametime.Min():0.000} ms; " +
+                $"Average: {_frametime.Average():0.000} ms)");
+
+            Loger.Shutdown();
+        }
+
+        private static void DrawScreen()
+        {
+            if (_outputBuffer == null || _changedPixels == null) return;
+
+            if (_changedPixels.Count == 0)
+            {
+                Console.Write(_outputBuffer.ToString());
+                return;
+            }
+
+            _outputBuffer.Clear();
+            _ = _outputBuffer.Append("\x1b[H\x1b[0m");
+
+            var pixelCodes = new string[WindowSize.X * WindowSize.Y];
+            string background = GetColorCode(BackgroundColor, ' ');
+
+            Parallel.ForEach(_changedPixels, index =>
+            {
+                int x = index % WindowSize.X;
+                int y = index / WindowSize.X;
+
+                var symbol = GetSymbol(x, y);
+                var color = GetPixel(x, y);
+
+                pixelCodes[index] = GetColorCode(color, symbol);
+            });
+
+            _ = Parallel.For(0, pixelCodes.Length, i =>
+            {
+                if (pixelCodes[i] == null)
+                {
+                    pixelCodes[i] = background;
+                }
+            });
+
+            _ = _outputBuffer.Append(string.Join(string.Empty, pixelCodes));
+            _changedPixels.Clear();
+            Console.Write(_outputBuffer.ToString());
         }
 
         #region Simple shapes
@@ -130,12 +132,12 @@ namespace Engine
         {
             if (_symbols == null || _pixels == null) return;
 
-            Parallel.For(0, text.Length, (i) =>
+            for (int i = 0; i < text.Length; i++)
             {
                 int newLeft = left + i;
                 SetPixel(newLeft, top, Colors.Black);
                 SetSymbol(newLeft, top, text[i]);
-            });
+            }
         }
 
         /// <summary>
@@ -152,8 +154,8 @@ namespace Engine
             int x1 = end.Position.X;
             int y1 = end.Position.Y;
 
-            int dx = Math.Abs(x1 - x0);
-            int dy = Math.Abs(y1 - y0);
+            int dx = (int)MathF.Abs(x1 - x0);
+            int dy = (int)MathF.Abs(y1 - y0);
             int sx = x0 < x1 ? 1 : -1;
             int sy = y0 < y1 ? 1 : -1;
             int err = dx - dy;
@@ -162,8 +164,8 @@ namespace Engine
 
             while (true)
             {
-                float currentDistance = Vector2.Distance(new(x0, y0), end.Position);
-                Color color = Color.Mix(start.Color, end.Color, currentDistance / distance);
+                var currentDistance = Vector2.Distance(new(x0, y0), end.Position);
+                var color = Color.Mix(start.Color, end.Color, currentDistance / distance);
                 SetPixel(x0, y0, color);
 
                 if (x0 == x1 && y0 == y1) break;
@@ -193,9 +195,9 @@ namespace Engine
             var minY = vertices.Min(p => p.Position.Y);
             var maxY = vertices.Max(p => p.Position.Y);
 
-            Parallel.For(minY, maxY + 1, (y) =>
+            for (int y = minY; y <= maxY; y++)
             {
-                List<(int X, Color Color)> intersections = new List<(int X, Color Color)>();
+                List<(int X, Color Color)> intersections = [];
                 for (int i = 0; i < vertices.Count; i++)
                 {
                     var p1 = vertices[i];
@@ -203,11 +205,11 @@ namespace Engine
 
                     if (p1.Position.Y == p2.Position.Y) continue;
 
-                    if (y < Math.Min(p1.Position.Y, p2.Position.Y) ||
-                        y > Math.Max(p1.Position.Y, p2.Position.Y)) continue;
+                    if (y < MathF.Min(p1.Position.Y, p2.Position.Y) ||
+                        y > MathF.Max(p1.Position.Y, p2.Position.Y)) continue;
 
                     float t = (float)(y - p1.Position.Y) / (p2.Position.Y - p1.Position.Y);
-                    int x = (int)(p1.Position.X + t * (p2.Position.X - p1.Position.X));
+                    int x = (int)(p1.Position.X + (t * (p2.Position.X - p1.Position.X)));
 
                     var color = Color.Mix(p1.Color, p2.Color, t);
                     intersections.Add((x, color));
@@ -220,47 +222,58 @@ namespace Engine
                     var start = intersections[i];
                     var end = intersections[i + 1];
 
-                    float length = end.X - start.X;
+                    var length = end.X - start.X;
                     if (length == 0) continue;
 
                     for (int x = start.X; x <= end.X; x++)
                     {
-                        float t = (x - start.X) / length;
+                        float t = (float)(x - start.X) / length;
                         var color = Color.Mix(start.Color, end.Color, t);
                         SetPixel(x, y, color);
                     }
                 }
-            });
+            }
         }
         #endregion
 
         #region Set/Get Pixel/Symbol
         public static void SetPixel(int left, int top, Color color)
         {
-            if (_pixels == null) return;
+            if (_pixels == null || _changedPixels == null) return;
+
+            color = Color.Mix(BackgroundColor, color, color.A / 255f);
 
             var index = GetPixelIndex(left, top);
-            _pixels[index] = color.R;
-            _pixels[index + 1] = color.G;
-            _pixels[index + 2] = color.B;
+            var currentColor = new Color(_pixels[index], _pixels[index + 1], _pixels[index + 2]);
+
+            if (currentColor == color) return;
+
+            lock (_pixels)
+            {
+                _pixels[index] = color.R;
+                _pixels[index + 1] = color.G;
+                _pixels[index + 2] = color.B;
+
+                _changedPixels.Add((top * WindowSize.X) + left);
+            }
         }
         public static Color GetPixel(int left, int top)
         {
-            if (_pixels == null) return (0, 0, 0);
+            if (_pixels == null) return Colors.Transparent;
 
             var index = GetPixelIndex(left, top);
-            return new(_pixels[index],
-                _pixels[index + 1], _pixels[index + 2]);
+            return new Color(_pixels[index], _pixels[index + 1], _pixels[index + 2]);
         }
         public static int GetPixelIndex(int left, int top) =>
             ((top * WindowSize.X) + left) * 3;
 
         public static void SetSymbol(int left, int top, char symbol)
         {
-            if (_symbols == null) return;
+            if (_symbols == null || _changedPixels == null) return;
 
             var index = GetSymbolIndex(left, top);
             _symbols[index] = symbol;
+            _ = _changedPixels!.Add(index);
         }
         public static char GetSymbol(int left, int top)
         {
@@ -283,14 +296,82 @@ namespace Engine
             _ = SetConsoleMode(handle, mode | 0x0004);
         }
 
-        private static string GetColorCode(Color color)
+        private static string GetColorCode(Color color, char symbol)
         {
-            if (!_colorCache.TryGetValue(color, out var code))
+            if (!_colorCache.TryGetValue((color, symbol), out var code))
             {
-                code = $"\x1b[48;2;{color.R};{color.G};{color.B}m";
-                _colorCache[color] = code;
+                StringBuilder sb = new();
+                sb.Append("\x1b[48;2;");
+                sb.Append(color.R);
+                sb.Append(';');
+                sb.Append(color.G);
+                sb.Append(';');
+                sb.Append(color.B);
+                sb.Append('m');
+                sb.Append(symbol);
+                sb.Append("\u001b[0m");
+                code = sb.ToString();
+                lock (_colorCache) _colorCache[(color, symbol)] = code;
             }
             return code;
+        }
+
+        private static void SetChangedAll()
+        {
+            if (_changedPixels == null) return;
+
+            _ = Parallel.For(0, WindowSize.X * WindowSize.Y, i =>
+            {
+                lock (_changedPixels) _ = _changedPixels.Add(i);
+            });
+        }
+
+        private static void InitializeArrays(int width, int height)
+        {
+            _pixels = new byte[width * height * 3];
+            _symbols = new char[width * height];
+            _changedPixels = new(width * height);
+
+            Array.Fill(_symbols, ' ');
+            Fill(_pixels, BackgroundColor);
+
+            _outputBuffer = new(width * height * 15);
+        }
+        private static void RunMainLoop()
+        {
+            var time = DateTime.Now;
+            var deltaTime = 0f;
+
+            while (IsOpen)
+            {
+                if (Console.KeyAvailable) OnKeyPressed?.Invoke(Console.ReadKey(true));
+
+                Fill(_pixels, BackgroundColor);
+                Array.Fill(_symbols!, ' ');
+
+                OnDraw?.Invoke(deltaTime);
+
+                DrawScreen();
+
+                Time += deltaTime;
+                Frames++;
+
+                deltaTime = (float)(DateTime.Now - time).TotalSeconds;
+                _frametime.Add((float)(DateTime.Now - time).TotalMilliseconds);
+                time = DateTime.Now;
+            }
+        }
+
+        private static void Fill(byte[]? pixels, Color color)
+        {
+            if (pixels == null) return;
+
+            for (int i = 0; i < pixels.Length; i += 3)
+            {
+                pixels[i] = color.R;
+                pixels[i + 1] = color.G;
+                pixels[i + 2] = color.B;
+            }
         }
         #endregion
 

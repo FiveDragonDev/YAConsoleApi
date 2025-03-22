@@ -2,6 +2,87 @@
 
 namespace Engine
 {
+    public static class Math
+    {
+        public static float Clamp(float value, float min, float max) =>
+            MathF.Max(MathF.Min(value, max), min);
+        public static float Clamp01(float value) => Clamp(value, 0, 1);
+    }
+
+    public readonly struct Matrix(int rows, int columns) : IEnumerable<float>
+    {
+        public readonly float this[int row, int column]
+        {
+            get => _table[(row * Columns) + column];
+            set => _table[(row * Columns) + column] = value;
+        }
+
+        public int Rows { get; } = rows;
+        public int Columns { get; } = columns;
+
+        private readonly float[] _table = new float[rows * columns];
+
+        public static Matrix Identity(int size)
+        {
+            Matrix matrix = new(size, size);
+            for (int i = 0; i < size; i++) matrix[i, i] = 1;
+            return matrix;
+        }
+
+        public static Matrix operator *(Matrix left, Matrix right)
+        {
+            if (left.Columns != right.Rows)
+                throw new InvalidOperationException(
+                    "Number of left matrix columns must be equal to number of right matrix rows");
+
+            Matrix result = new(left.Rows, right.Columns);
+            for (int i = 0; i < left.Rows; i++)
+                for (int j = 0; j < right.Columns; j++)
+                    for (int k = 0; k < left.Columns; k++)
+                        result[i, j] += left[i, k] * right[k, j];
+            return result;
+        }
+        public static float[] operator *(float[] vector, Matrix matrix)
+        {
+            if (vector.Length != matrix.Columns) throw new ArgumentException(
+                "Number of rows and vectors dimensions must be equal");
+
+            var result = new float[matrix.Rows];
+            for (int i = 0; i < matrix.Rows; i++)
+                for (int j = 0; j < matrix.Columns; j++)
+                    result[i] += matrix[i, j] * vector[j];
+            return result;
+        }
+
+        public static implicit operator float[,](Matrix matrix)
+        {
+            var result = new float[matrix.Rows, matrix.Columns];
+            for (int i = 0; i < matrix.Rows * matrix.Columns; i++)
+            {
+                int column = i % matrix.Columns;
+                int row = i / matrix.Columns;
+                result[row, column] = matrix._table[i];
+            }
+            return result;
+        }
+
+        public static implicit operator Matrix(float[,] matrix)
+        {
+            Matrix result = new(matrix.GetLength(0), matrix.GetLength(1));
+            for (int i = 0; i < result.Rows; i++)
+            {
+                for (int j = 0; j < result.Columns; j++)
+                {
+                    result[i, j] = matrix[i, j];
+                }
+            }
+            return result;
+        }
+
+        public IEnumerator<float> GetEnumerator() => (IEnumerator<float>)_table.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     public struct Vector2(float x, float y) : IEquatable<Vector2>
     {
         public float X = x, Y = y;
@@ -58,7 +139,6 @@ namespace Engine
 
         public override readonly string? ToString() => $"({X:0.000}, {Y:0.000})";
     }
-
     public struct Vector2i(int x, int y) : IEquatable<Vector2i>
     {
         public int X = x, Y = y;
@@ -116,12 +196,20 @@ namespace Engine
         public override readonly string? ToString() => $"({X}, {Y})";
     }
 
-    public struct Color(byte r, byte g, byte b) : IEquatable<Color>
+    public struct Color(byte r, byte g, byte b, byte a) : IEquatable<Color>
     {
-        public byte R = r, G = g, B = b;
+        public byte R = r, G = g, B = b, A = a;
 
-        public static Color Invert(Color color) => new((byte)(255 - color.R),
-            (byte)(255 - color.G), (byte)(255 - color.B));
+        public Color(byte r, byte g, byte b) : this(r, g, b, 255) { }
+        public Color(float r, float g, float b, float a) :
+            this((byte)(Math.Clamp01(r) * 255), (byte)(Math.Clamp01(g) * 255),
+                (byte)(Math.Clamp01(b) * 255), (byte)(Math.Clamp01(a) * 255))
+        { }
+        public Color(float r, float g, float b) : this(r, g, b, 1) { }
+
+        public static Color Invert(Color color) =>
+            new((byte)(255 - color.R), (byte)(255 - color.G),
+                (byte)(255 - color.B), (byte)(255 - color.A));
 
         public static Color Mix(Color from, Color to, float value)
         {
@@ -130,39 +218,45 @@ namespace Engine
             var r = (byte)(from.R + ((to.R - from.R) * value));
             var g = (byte)(from.G + ((to.G - from.G) * value));
             var b = (byte)(from.B + ((to.B - from.B) * value));
+            var a = (byte)(from.A + ((to.A - from.A) * value));
 
-            return new Color(r, g, b);
+            return new Color(r, g, b, a);
         }
 
-        public static implicit operator (byte r, byte g, byte b)(Color v) => (v.R, v.G, v.B);
-        public static implicit operator byte[](Color v) => [v.R, v.G, v.B];
+        public static implicit operator (byte r, byte g, byte b, byte a)
+            (Color v) => (v.R, v.G, v.B, v.A);
+        public static implicit operator byte[](Color v) => [v.R, v.G, v.B, v.A];
 
         public static implicit operator Color
-            ((byte r, byte g, byte b) v) => new(v.r, v.g, v.b);
-        public static implicit operator Color(byte[] v) => new(v[0], v[1], v[2]);
+            ((byte r, byte g, byte b, byte a) v) => new(v.r, v.g, v.b, v.a);
+        public static implicit operator Color(byte[] v) => new(v[0], v[1], v[2], v[3]);
 
         public static bool operator ==(Color left, Color right) => left.Equals(right);
         public static bool operator !=(Color left, Color right) => !(left == right);
 
         public override readonly bool Equals(object? obj) =>
             obj is Color color && Equals(color);
-        public readonly bool Equals(Color other) =>
-            R == other.R && G == other.G && B == other.B;
-        public override readonly int GetHashCode() => HashCode.Combine(R, G, B);
+        public readonly bool Equals(Color other) => GetHashCode() == other.GetHashCode();
+        public override readonly int GetHashCode() => HashCode.Combine(R, G, B, A);
 
-        public override readonly string? ToString() => $"({R}, {G}, {B})";
+        public override readonly string? ToString() => $"({R}, {G}, {B}, {A})";
     }
     public static class Colors
     {
-        public static readonly Color White = new(255, 255, 255);
-        public static readonly Color Red = new(255, 0, 0);
-        public static readonly Color Yellow = new(255, 255, 0);
-        public static readonly Color Green = new(0, 255, 0);
-        public static readonly Color Cyan = new(0, 255, 255);
-        public static readonly Color Blue = new(0, 0, 255);
-        public static readonly Color Purple = new(255, 0, 255);
-        public static readonly Color Gray = new(128, 128, 128);
+        public static readonly Color White = new(1f, 1f, 1f);
+        public static readonly Color LightGray = new(0.75f, 0.75f, 0.75f);
+        public static readonly Color Gray = new(0.5f, 0.5f, 0.5f);
+        public static readonly Color DarkGray = new(0.25f, 0.25f, 0.25f);
         public static readonly Color Black = new(0, 0, 0);
+
+        public static readonly Color Red = new(1f, 0, 0);
+        public static readonly Color Yellow = new(1f, 1f, 0);
+        public static readonly Color Green = new(0, 1f, 0);
+        public static readonly Color Cyan = new(0, 1f, 1f);
+        public static readonly Color Blue = new(0, 0, 1f);
+        public static readonly Color Magenta = new(1f, 0, 1f);
+
+        public static readonly Color Transparent = new(0, 0, 0, 0);
     }
 
     public readonly struct VertexArray : IEnumerable<Vertex>, IList<Vertex>
@@ -212,7 +306,6 @@ namespace Engine
         public static implicit operator Vertex[](VertexArray vertices) =>
             [.. vertices._vertices];
     }
-
     public struct Vertex(Vector2i position, Color color)
     {
         public Vector2i Position = position;
